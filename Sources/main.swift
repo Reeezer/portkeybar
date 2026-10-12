@@ -1,0 +1,38 @@
+import AppKit
+import ServiceManagement
+
+if CommandLine.arguments.contains("--configure-from-env") {
+    do {
+        guard let key = ProcessInfo.processInfo.environment["PORTKEY_API_KEY"] else { throw UsageError.noKey }
+        try Credentials.save(key)
+        UserDefaults.standard.set(NSUserName(), forKey: "user")
+        print("Portkey API key saved in Keychain for \(NSUserName()).")
+        exit(0)
+    } catch {
+        print(error.localizedDescription)
+        exit(1)
+    }
+}
+
+if CommandLine.arguments.contains("--check") {
+    Task {
+        do {
+            let user = UserDefaults.standard.string(forKey: "user") ?? NSUserName()
+            let period = UsagePeriod.saved()
+            let usage = try await PortkeyClient().fetch(key: Credentials.read(), user: user, period: period)
+            print("\(usage.title) · \(period.rawValue) · \(user)")
+            print("Launch at login: \(SMAppService.mainApp.status == .enabled)")
+            exit(0)
+        } catch {
+            print(error.localizedDescription)
+            exit(1)
+        }
+    }
+    RunLoop.main.run()
+}
+
+let application = NSApplication.shared
+let delegate = AppDelegate()
+application.delegate = delegate
+application.setActivationPolicy(.accessory)
+application.run()
