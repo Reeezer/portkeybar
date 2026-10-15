@@ -30,11 +30,13 @@ To update, quit PortkeyBar, run `git pull --ff-only` in the source folder, and r
 
 ## 🚀 Usage
 
-Click the widget → **Settings…**, enter your **User ID** and **API key**, then **Save**.
+1. **Connect:** click the widget → **Settings…**, paste your **User ID** and **API key**, then **Save**.
+2. **Read:** `6.09$ #3` = $6.09 spent, third-highest in your workspace. Ties share a rank.
+3. **Choose a period:** open **Time range**. The default is **Last 24 hours**.
+4. **Look back:** open **Ranking history…** and hover a day for its spend and rank.
+5. **Refresh:** choose **Refresh now**. It also updates every five minutes and after wake.
 
-`6.09$ #3` means $6.09 spent in the selected time range, ranked third in your workspace. Highest spend ranks #1; ties share a rank. Friendly rivalry optional.
-
-It refreshes every five minutes and after wake, or with **Refresh now**.
+![Daily spending and ranking history, expanded from the macOS menu bar](ranking-history-card.png)
 
 > [!NOTE]
 > A ⚠ means the last refresh failed; open the menu for the error.
