@@ -70,15 +70,18 @@ struct UsagePage: Decodable {
     }
 }
 
-struct Usage: Equatable {
+struct Usage: Codable, Equatable {
     let dollars: Double
     let rank: Int
+    let people: Int?
 
     init(rows: [UserCost], user: String) throws {
         guard Set(rows.map(\.user)).count == rows.count else { throw UsageError.invalidData }
         let cents = rows.first { $0.user == user }?.cost ?? 0
         dollars = cents / 100
-        rank = 1 + rows.filter { !$0.user.isEmpty && $0.cost > cents }.count
+        let users = rows.filter { !$0.user.isEmpty }
+        people = users.count + (users.contains { $0.user == user } || user.isEmpty ? 0 : 1)
+        rank = 1 + users.filter { $0.cost > cents }.count
     }
 
     var title: String {
@@ -110,6 +113,7 @@ struct PortkeyClient {
 
     static func request(key: String, start: Date, now: Date, page: Int) -> URLRequest {
         let formatter = ISO8601DateFormatter()
+        formatter.formatOptions.insert(.withFractionalSeconds)
         var components = URLComponents(string: "https://api.portkey.ai/v1/analytics/groups/users")!
         components.queryItems = [
             URLQueryItem(name: "time_of_generation_min", value: formatter.string(from: start)),
@@ -126,13 +130,18 @@ struct PortkeyClient {
     }
 
     func fetch(key: String, user: String, period: UsagePeriod = .last24Hours, now: Date = Date()) async throws -> Usage {
+        try await fetch(key: key, user: user, start: period.startDate(endingAt: now), end: now)
+    }
+
+    func fetch(key: String, user: String, start: Date, end: Date) async throws -> Usage {
         guard !key.isEmpty else { throw UsageError.noKey }
-        let start = period.startDate(endingAt: now)
+        guard start <= end else { throw UsageError.invalidData }
         var rows: [UserCost] = []
         var page = 0
         var expectedTotal: Int?
         while true {
-            let (data, response) = try await session.data(for: Self.request(key: key, start: start, now: now, page: page))
+            try Task.checkCancellation()
+            let (data, response) = try await session.data(for: Self.request(key: key, start: start, now: end, page: page))
             guard let response = response as? HTTPURLResponse else { throw UsageError.invalidData }
             guard response.statusCode == 200 else { throw UsageError.http(response.statusCode) }
             let result = try JSONDecoder().decode(UsagePage.self, from: data)

@@ -1,11 +1,14 @@
 import AppKit
 import ServiceManagement
+import SwiftUI
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private let menu = NSMenu()
     private let client = PortkeyClient()
+    private let history = RankingHistory()
+    private let historyPopover = NSPopover()
     private var timer: Timer?
     private var refreshTask: Task<Void, Never>?
     private var usage: Usage?
@@ -40,20 +43,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             defer {
                 let restart = Task.isCancelled
                 refreshTask = nil
+                history.isLoading = false
                 updateMenu()
                 if restart { refresh() }
             }
             do {
                 let key = try Credentials.read()
                 let now = Date()
+                history.selectProfile(key: key, user: currentUser)
+                history.isLoading = true
                 let newUsage = try await client.fetch(key: key, user: currentUser, period: currentPeriod, now: now)
                 guard !Task.isCancelled else { return }
                 usage = newUsage
                 lastUpdated = now
                 refreshError = nil
+                history.observe(newUsage)
+                updateMenu()
+                await history.refresh(key: key, user: currentUser, now: now,
+                                      todayUsage: currentPeriod == .today ? newUsage : nil,
+                                      includePast: historyPopover.isShown)
             } catch {
                 guard !Task.isCancelled else { return }
                 refreshError = error.localizedDescription
+                history.reportFailure(error)
             }
         }
         updateMenu()
@@ -62,14 +74,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func updateMenu() {
         item.button?.title = (usage?.title ?? "Portkey …") + (refreshError == nil ? "" : " ⚠")
         let updated = lastUpdated.map { "Updated \($0.formatted(date: .omitted, time: .shortened))" } ?? "No usage fetched yet"
-        let details = "\(period.rawValue) · \(user)\nHighest spend ranks #1\n\(updated)"
+        let details = "\(period.rawValue) · \(user)\n\(updated)\nHighest spend ranks #1"
         item.button?.toolTip = details + (refreshError.map { "\n\($0)" } ?? "")
         item.button?.setAccessibilityLabel("Portkey cost and team spending rank · \(period.rawValue)")
         item.button?.setAccessibilityValue(item.button?.title)
         menu.removeAllItems()
         addItem("\(period.rawValue) · \(user)")
-        addItem("Highest spend ranks #1")
         addItem(updated)
+        addItem("Highest spend ranks #1")
         if let refreshError { addItem(refreshError) }
         if let startupError { addItem(startupError) }
         menu.addItem(.separator())
@@ -82,6 +94,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             periods.addItem(entry)
         }
         addItem("Time range").submenu = periods
+        addItem("Ranking history…", action: #selector(showHistory))
         let refreshItem = addItem(refreshTask == nil ? "Refresh now" : "Refreshing…", action: #selector(refresh))
         refreshItem.isEnabled = refreshTask == nil
         addItem("Open Portkey", action: #selector(openPortkey))
@@ -125,6 +138,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSWorkspace.shared.open(URL(string: "https://app.portkey.ai")!)
     }
 
+    @objc private func showHistory() {
+        guard let button = item.button else { return }
+        historyPopover.behavior = .transient
+        historyPopover.contentSize = NSSize(width: 300, height: 228)
+        historyPopover.contentViewController = NSHostingController(rootView: RankingHistoryView(
+            history: history, onRefresh: { [weak self] in self?.refresh() },
+            onClose: { [weak self] in self?.historyPopover.performClose(nil) }
+        ))
+        NSApp.activate()
+        historyPopover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        historyPopover.contentViewController?.view.window?.makeKey()
+        if let refreshTask { refreshTask.cancel() }
+        else { refresh() }
+    }
+
     @objc private func settings() {
         let alert = NSAlert()
         alert.messageText = "PortkeyBar settings"
@@ -154,6 +182,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if !keyField.stringValue.isEmpty { try Credentials.save(keyField.stringValue) }
             _ = try Credentials.read()
             UserDefaults.standard.set(newUser, forKey: "user")
+            historyPopover.performClose(nil)
+            history.resetProfile()
             reloadUsage()
         } catch { showError(error.localizedDescription) }
     }
