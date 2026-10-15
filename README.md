@@ -4,6 +4,7 @@ A tiny macOS menu-bar widget for [Portkey](https://portkey.ai) users who want th
 
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)
 ![Swift 6](https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 ![The macOS menu bar with PortkeyBar highlighted and a callout showing spending and team rank](menubar-preview.png)
 
