@@ -1,12 +1,21 @@
 # PortkeyBar
 
-Your Portkey spending and team spending rank in the macOS menu bar. For example, `12.34$ #2` means $12.34 spent in the selected time range, ranked second in your workspace. Highest spend ranks #1; equal costs share a rank.
+A tiny macOS menu-bar widget for [Portkey](https://portkey.ai) users who want their spending and team rank at a glance.
 
-## Install
+![macOS 14+](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)
+![Swift 6](https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white)
 
-Requires an Apple Silicon Mac, macOS 14 or later, and Swift 6 Command Line Tools. If you need the tools, run `xcode-select --install` and finish the installer first.
+![The macOS menu bar with PortkeyBar highlighted and a callout showing spending and team rank](menubar-preview.png)
 
-Open Terminal and run:
+## ✨ Features
+
+- Your spending and workspace rank, always in the menu bar.
+- Pick a time range or peek at daily ranking history.
+- Native Mac widget; your API key stays in macOS Keychain.
+
+## 📦 Installation
+
+Requires **macOS 14+**, an **Apple Silicon or Intel Mac**, and **Swift 6 Command Line Tools**. Install missing tools with `xcode-select --install`.
 
 ```sh
 git clone https://github.com/Reeezer/portkeybar.git ~/portkeybar
@@ -17,40 +26,28 @@ ditto .build/PortkeyBar.app ~/Applications/PortkeyBar.app
 open ~/Applications/PortkeyBar.app
 ```
 
-Click PortkeyBar's text in the menu bar, choose **Settings…**, and enter your Portkey User ID and a workspace API key with analytics access. Your API key is saved in macOS Keychain.
+To update, quit PortkeyBar, run `git pull --ff-only` in the source folder, and repeat the build, copy, and open steps.
 
-## Use
+## 🚀 Usage
 
-- **Time range** lets you choose the last 1h, 5h, 24h, 3d, 7d, 14d, or 30d, plus Today, This week, and This month. Last 24 hours is the default; your selection is saved across restarts.
-- Today, This week, and This month use your Mac's calendar and time zone. The other ranges are rolling windows.
-- Spending refreshes every five minutes and after wake. Choose **Refresh now** for an immediate update.
-- **Launch at login** is enabled by default. Toggle it in the menu; approve it in System Settings → General → Login Items if macOS asks.
-- A **⚠** means the last refresh failed. Open the menu to see the error and when the displayed value was fetched.
+Click the widget → **Settings…**, enter your **User ID** and **API key**, then **Save**.
 
-## Update
+`6.09$ #3` means $6.09 spent in the selected time range, ranked third in your workspace. Highest spend ranks #1; ties share a rank. Friendly rivalry optional.
 
-Choose **Quit PortkeyBar** in the menu, then run:
+It refreshes every five minutes and after wake, or with **Refresh now**.
 
-```sh
-cd ~/portkeybar
-git pull --ff-only
-bash build.sh
-ditto .build/PortkeyBar.app ~/Applications/PortkeyBar.app
-open ~/Applications/PortkeyBar.app
-```
+> [!NOTE]
+> A ⚠ means the last refresh failed; open the menu for the error.
 
-Updating keeps your saved API key, User ID, and time range. macOS may ask you to allow Keychain access again. If you cloned the source somewhere other than `~/portkeybar`, use that folder instead.
+## ⚙️ Configuration
 
-## Remove
+Set these in **Settings…** or directly in the widget's menu:
 
-1. Turn off **Launch at login** if it is checked, then choose **Quit PortkeyBar**.
-2. In Finder, move `~/Applications/PortkeyBar.app` to the Trash. If PortkeyBar still appears in System Settings → General → Login Items, remove it there too.
+| Option | Default | Description |
+| --- | --- | --- |
+| User ID | Mac username | Exact identifier from Portkey's user analytics. |
+| API key | None | Workspace key with analytics access; saved in Keychain. |
+| Time range | Last 24 hours | Choose a rolling or calendar range; your choice is saved. |
+| Launch at login | On | Toggle it in the menu. |
 
-To also delete the saved API key and settings, run:
-
-```sh
-security delete-generic-password -s local.portkeybar.usage -a analytics
-defaults delete local.portkeybar.usage
-```
-
-You can also move `~/portkeybar` to the Trash to remove the source and local builds.
+Connects to Portkey Cloud (`api.portkey.ai`); custom endpoints aren't supported.
